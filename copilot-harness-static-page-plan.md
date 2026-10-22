@@ -1,6 +1,6 @@
 # Plan: a static page that talks to the VS Code Copilot harness
 
-> **For the implementing agent.** Read this whole file before writing code. The facts in §3 come from research and from reading the VS Code source (main branch, Oct 2026), and are needed to get the wire protocol right. Items in §4 are **not verified**: test them early and write the result into this file.
+> **For the implementing agent.** Read this whole file before writing code. The facts in §3 come from research and from reading the VS Code source (main branch, Oct 2026), and are needed to get the wire protocol right. Items in §4 started out **unverified**; their results are in the table's Result column and in §10.
 
 ---
 
@@ -138,15 +138,15 @@ Source: `src/vs/platform/agentHost/common/state/protocol/`
 
 ## 4. Unknowns: verify these first and record the results here
 
-| # | Question | How to test | Fallback |
-|---|---|---|---|
-| U1 | Does Chrome's Local Network Access prompt appear when `https://*.github.io` opens `ws://127.0.0.1`? (Chrome enforces LNA for public → loopback from v142.) | Open the deployed page in Chrome and connect. | Tell the user to click **Allow**. If the connection is still blocked, try `fetch` hints (`targetAddressSpace:"loopback"`), or serve the page from `http://localhost` during development. |
-| U2 | Is mixed content (`https` page → `ws://` loopback) allowed? Chrome exempts known-local targets once LNA is granted. | Same test. Use the literal `127.0.0.1`, not a hostname. | Use a local TLS proxy, or run from `localhost`. |
-| U3 | Is the protocol version negotiated correctly? | Log the result of `initialize`. | See §3.4. |
-| U4 | Does a token from `gh auth token` work for the Copilot resource? (With an org that uses SSO, the token may need SSO authorization.) | Run `authenticate` and then `createSession`. | Run `gh auth refresh -s read:user,user:email` and authorize SSO. |
-| U5 | Does the org policy that disables Copilot CLI block `code agent host`? (The host identifies itself as `vscode-agent-host`.) | Run `createSession` and send a prompt. | Report the exact error text to the user. **Do not try to bypass a policy.** |
-| U6 | Does `@microsoft/agent-host-protocol` bundle for the browser? | `npm i`, then try building it with Vite. | Keep the raw client. |
-| U7 | Does Safari or Firefox work? | Manual test. | Document the page as Chrome/Edge-only for v1. |
+| # | Question | How to test | Fallback | Result |
+|---|---|---|---|---|
+| U1 | Does Chrome's Local Network Access prompt appear when `https://*.github.io` opens `ws://127.0.0.1`? (Chrome enforces LNA for public → loopback from v142.) | Open the deployed page in Chrome and connect. | Tell the user to click **Allow**. If the connection is still blocked, try `fetch` hints (`targetAddressSpace:"loopback"`), or serve the page from `http://localhost` during development. | **Yes.** Chrome on Mac prompts; after Allow it connects (§10.23). |
+| U2 | Is mixed content (`https` page → `ws://` loopback) allowed? Chrome exempts known-local targets once LNA is granted. | Same test. Use the literal `127.0.0.1`, not a hostname. | Use a local TLS proxy, or run from `localhost`. | **Yes**, once LNA is granted (§10.23). |
+| U3 | Is the protocol version negotiated correctly? | Log the result of `initialize`. | See §3.4. | **Yes**, `1.0.0` (§10.12). |
+| U4 | Does a token from `gh auth token` work for the Copilot resource? (With an org that uses SSO, the token may need SSO authorization.) | Run `authenticate` and then `createSession`. | Run `gh auth refresh -s read:user,user:email` and authorize SSO. | **Yes** for `gho_`. PATs never work through the host (§10.18); VS Code sign-in works too (§10.20). |
+| U5 | Does the org policy that disables Copilot CLI block `code agent host`? (The host identifies itself as `vscode-agent-host`.) | Run `createSession` and send a prompt. | Report the exact error text to the user. **Do not try to bypass a policy.** | **No**, not blocked (§10.22). |
+| U6 | Does `@microsoft/agent-host-protocol` bundle for the browser? | `npm i`, then try building it with Vite. | Keep the raw client. | Not tested. v1 uses the raw client. |
+| U7 | Does Safari or Firefox work? | Manual test. | Document the page as Chrome/Edge-only for v1. | **Open.** Only Chrome on Mac is verified from github.io. Edge, Safari, Firefox and the Windows corporate browser are pending. |
 
 Sources for U1/U2: https://developer.chrome.com/blog/local-network-access, https://blog.openreplay.com/chrome-local-network-access-lna-permission/
 
@@ -290,7 +290,8 @@ These override anything above that conflicts with them.
 ### 10.1 Location and deploy
 - All code goes in `ai-connect/` (see §6). Do not touch the root `README.md`, `src/`, `report-ui/`, or the existing `ci.yml`/`release.yml`.
 - `pages.yml`: trigger on `push` to `main` with `paths: ['ai-connect/**']`, plus `workflow_dispatch`. Use `actions/configure-pages`, then `actions/upload-pages-artifact` with `path: ai-connect`, then `actions/deploy-pages`. No build step. Permissions: `pages: write` and `id-token: write`.
-- The repo has **no git remote yet**. Steps 0–5 are verified from `http://localhost` (`python3 -m http.server -d ai-connect 5173`). **Step 6 (U1/U2/U7 from github.io) is pending deploy**, after the user pushes and enables Pages.
+- **Update 2026-10-22:** the PoC now lives in its own public repo, https://github.com/edvinas-glodenis/ai-connect-poc, with the same `ai-connect/` layout and `pages.yml`. It is deployed at https://edvinas-glodenis.github.io/ai-connect-poc/ (§10.23). That repo is the primary copy; the `ai-connect/` folder in `qaily-playwright-html-reporter` is an older copy.
+- Steps 0–5 were verified from `http://localhost` (`npm run serve` in `ai-connect/`); Step 6 from github.io (§10.23).
 
 ### 10.2 Environment facts (this dev machine)
 - VS Code **1.142.0** is installed at `/Applications/Visual Studio Code 3.app`. `code` is **not on PATH**. Start the host with:
@@ -392,13 +393,13 @@ Behavior:
 - **Working directory on Windows:** accept `C:\…` too, and convert it to `file:///C:/…`. This supersedes the POSIX-only rule in §10.3.
 - **Browsers can't tell a 403 apart from "host not running":** both surface as WebSocket error + close 1006. The UI shows one combined message, which replaces the Step 2 "Rejected (403)" acceptance text.
 
-### 10.14 Implementation status (2026-10-21)
+### 10.14 Implementation status (updated 2026-10-22)
 - **Step 0:** done (§10.12, §10.13).
-- **Step 1:** done. `ai-connect/src/ahp-client.js` has 13 tests passing with `cd ai-connect && npm test` (Node 22 needs `node --test test/*.test.js`; it doesn't accept a directory argument). `ai-connect/package.json` sets `"type":"module"`.
+- **Step 1:** done. `ai-connect/src/ahp-client.js` has 15 tests passing with `cd ai-connect && npm test` (Node 22 needs `node --test test/*.test.js`; it doesn't accept a directory argument). `ai-connect/package.json` sets `"type":"module"`.
 - **Steps 2–5:** implemented in `index.html`, `src/{session,render,app}.js` and `src/styles.css`.
   - `session.js` was verified end to end from Node against the real host: a multi-paragraph answer streamed, and pings worked.
-  - **Pending:** a manual browser check of the page UI, including a tool card with Approve/Deny and Stop.
-- **Step 6:** `.github/workflows/pages.yml` is written. Its test job runs the unit tests plus the innerHTML grep; deploy uploads `ai-connect/` only. **Pending** a git remote and enabling Pages (U1, U2, U7).
+  - The page has since been used in the browser on Mac and on the Windows corporate machine (§10.22, §10.23).
+- **Step 6:** done for Chrome on Mac. `.github/workflows/pages.yml` runs the unit tests plus the innerHTML grep, then deploys `ai-connect/` only. The first deploy is live (§10.23). U7 (other browsers) is still open.
 - **Step 7:** not started.
 - **Added a file not in §6:** `src/app.js`, the UI wiring. The CSP forbids inline scripts, so this code has to live in its own file.
 
@@ -491,7 +492,7 @@ Behavior:
 - **Sign-in:** `gh` can't sign in on that network, and PATs are refused through the agent host (§10.18). **VS Code signed the host in** via `chat.remoteAgentHosts` + the Agents window (§10.20). The page then ran a Copilot session with an empty GitHub token field.
 - **U5 answered:** the org's "Copilot CLI disabled" policy does **not** block the Copilot harness in the agent host.
 - **Harmless log noise:** `Agent host WebSocket proxy ended with error: Os { code: 10053 … }` appears when the browser closes a connection, e.g. on a page reload.
-- **Still open:** U1, U2 and U7 (the deployed github.io page in Chrome/Edge, local network access prompt, corporate browser policy), and Step 7.
+- **Still open at the time:** U1, U2 and U7. U1 and U2 are now answered (§10.23).
 
 ### 10.23 Deployed github.io page in Chrome on Mac: WORKING (2026-10-22)
 - Deployed to https://edvinas-glodenis.github.io/ai-connect-poc/ (repo `edvinas-glodenis/ai-connect-poc`, Pages built by `pages.yml`).
