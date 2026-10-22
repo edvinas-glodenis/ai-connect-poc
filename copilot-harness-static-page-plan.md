@@ -492,3 +492,10 @@ Behavior:
 - **U5 answered:** the org's "Copilot CLI disabled" policy does **not** block the Copilot harness in the agent host.
 - **Harmless log noise:** `Agent host WebSocket proxy ended with error: Os { code: 10053 … }` appears when the browser closes a connection, e.g. on a page reload.
 - **Still open:** U1, U2 and U7 (the deployed github.io page in Chrome/Edge, local network access prompt, corporate browser policy), and Step 7.
+
+### 10.23 Deployed github.io page in Chrome on Mac: WORKING (2026-10-22)
+- Deployed to https://edvinas-glodenis.github.io/ai-connect-poc/ (repo `edvinas-glodenis/ai-connect-poc`, Pages built by `pages.yml`).
+- **U1 answered:** Chrome shows the Local Network Access prompt (asking to allow access to devices on the local network) when the page connects to `ws://127.0.0.1`. After **Allow**, the connection works.
+- **U2 answered:** once LNA is granted, the `https` page may open the `ws://` loopback socket. No mixed-content block, no TLS proxy needed.
+- The full flow (connect, session, streamed reply) works from the public page.
+- **Still open:** U7 (Edge, Safari, Firefox; Chrome/Edge under the Windows corporate browser policy) and Step 7.

@@ -103,7 +103,7 @@ It asks before anything else, such as writes outside the folder or unknown comma
 
 ## Limits
 
-- Tested in Chrome on macOS. Safari, Firefox and the github.io deployment are not verified yet.
+- Tested in Chrome on macOS, both from `http://localhost` and from the github.io deployment (Chrome asks once to allow local network access). Edge, Safari and Firefox are not verified yet.
 - Works only on the machine where the host runs.
 - A rejected connection token and a host that isn't running look the same to a browser. The page reports both with one message.
 
