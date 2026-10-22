@@ -1,0 +1,11 @@
+{
+  "name": "ai-connect",
+  "private": true,
+  "type": "module",
+  "description": "Static page that talks to a local VS Code Agent Host (AHP over WebSocket)",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "serve": "node scripts/serve.mjs 5173",
+    "spike": "node spike/connect.mjs"
+  }
+}

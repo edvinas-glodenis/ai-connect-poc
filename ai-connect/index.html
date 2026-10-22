@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src ws://127.0.0.1:* ws://localhost:*; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Copilot Harness Connect</title>
+  <link rel="stylesheet" href="src/styles.css">
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>Copilot Harness Connect</h1>
+    <span id="status" class="pill pill-off">Disconnected</span>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <p class="warning">
+        <strong>The connection token is a remote-control key.</strong>
+        Anyone who has it can make the agent run commands on your computer. Paste it only into pages you trust.
+      </p>
+
+      <form id="connect-form" autocomplete="off">
+        <label>Host URL
+          <input id="host" type="text" placeholder="ws://127.0.0.1:8081 or paste the whole Local: line" spellcheck="false" required>
+        </label>
+        <label>Connection token
+          <input id="tkn" type="password" placeholder="filled in from ?tkn= if you paste the Local: line" spellcheck="false">
+        </label>
+        <div class="row">
+          <button id="connect" type="submit" class="btn btn-primary">Connect</button>
+          <button id="forget" type="button" class="btn">Disconnect &amp; forget</button>
+        </div>
+        <label class="check"><input id="remember" type="checkbox"> Remember for this tab</label>
+      </form>
+
+      <div id="host-info" class="host-info" hidden></div>
+
+      <form id="session-form" autocomplete="off" hidden>
+        <label>Agent
+          <select id="agent"></select>
+        </label>
+        <label>GitHub host
+          <input id="gh-host" type="text" placeholder="empty = github.com, or acme.ghe.com / github.company.com" spellcheck="false">
+        </label>
+        <p class="hint">Only for GitHub Enterprise with its own domain. Enterprise Cloud on github.com (SSO orgs) leaves this empty. Changing it re-points the whole local host.</p>
+        <label>GitHub token
+          <input id="gh" type="password" placeholder="gho_… from gh auth token (optional if the host is already signed in)" spellcheck="false">
+        </label>
+        <details class="help">
+          <summary>How do I get a GitHub token?</summary>
+          <div class="tabs" role="tablist">
+            <button type="button" role="tab" class="tab" data-tab="gh" aria-selected="true">gh CLI (recommended)</button>
+            <button type="button" role="tab" class="tab" data-tab="pat" aria-selected="false">Personal tokens</button>
+          </div>
+          <div class="tab-panel" data-panel="gh">
+            <pre id="gh-commands">gh auth login
+gh auth token</pre>
+            <p>If the host rejects it, add the Copilot scopes with <code>gh auth refresh -s read:user,user:email</code>. With SSO, authorize the org when gh asks.</p>
+          </div>
+          <div class="tab-panel" data-panel="pat" hidden>
+            <p><strong>Personal access tokens don't work here</strong>, classic (<code>ghp_…</code>) or fine-grained (<code>github_pat_…</code>). GitHub's Copilot service accepts them only from the official Copilot CLI, and the VS Code agent host is a different client. Use <code>gh auth token</code>.</p>
+          </div>
+        </details>
+        <label>Working directory
+          <input id="cwd" type="text" placeholder="/Users/me/project or C:\work\project" spellcheck="false" required>
+        </label>
+        <p class="hint">The host lets the agent read and write files in this folder <strong>without asking</strong>, and runs commands it considers safe. It asks before anything else. Use a dedicated folder.</p>
+        <button id="start" type="submit" class="btn btn-primary">Start session</button>
+      </form>
+    </aside>
+
+    <section class="chat">
+      <div id="transcript" class="transcript" aria-live="polite"></div>
+      <form id="prompt-form" class="prompt" autocomplete="off">
+        <textarea id="prompt" rows="3" placeholder="Start a session first" disabled></textarea>
+        <div class="row">
+          <button id="stop" type="button" class="btn" hidden>Stop</button>
+          <button id="send" type="submit" class="btn btn-primary" disabled>Send</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
